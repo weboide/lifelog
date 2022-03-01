@@ -1,6 +1,8 @@
 <?php
 require(__DIR__.'/../bootstrap.php');
 
+$log_start_dt = strtotime('today 00:00');
+
 /* Add an entry */
 if(isset($_POST['submitaddentry'])) {
 
@@ -42,6 +44,19 @@ if(isset($_POST['stop-entry'])) {
     redirect('/');
 }
 
+
+/* Delete an entry */
+
+if(isset($_POST['delete-entry'])) {
+    $entry = getLogEntry($_POST['delete-entry']);
+    if(!$entry) {
+        throw new Exception('No entry for the specified ID');
+    }
+    
+    deleteLogEntry($entry['id']);
+    redirect('/');
+}
+
 ?>
 <?php require(__DIR__.'/../template_header.php'); ?>
 <div class="container">
@@ -67,20 +82,13 @@ if(isset($_POST['stop-entry'])) {
                         <input type="text" name="tz" id="inputtz" class="form-control"/>
                         <label for="inputtz" class="sr-only">Time Zone</label>
                     </div>
-                    <?php /*<label for="inputDate1" class="sr-only">End Date</label>
-                    <select class="form-select" name="tags" multiple aria-label="multiple select example">
-                    <?php
-                        foreach(getTags() as $tag):
-                    ?>
-                    <option value="<?php echo htmlspecialchars($tag); ?>"><?php echo htmlspecialchars($tag); ?></option>
-                    <?php endforeach; ?>
-                    </select> */ ?>
                     <button name="submitaddentry" class="btn btn-lg btn-primary btn-block" type="submit">Add Entry</button>
                 </form>
             </div>
         </div>
         <div class="entries col-sm-12 col-lg-6 my-3">
             <div class="p-3 bg-body rounded shadow-sm">
+                <h2 class="text-center">Entries for <span class="text-muted"><?php echo htmlspecialchars(date('l Y-m-d', $log_start_dt)); ?></span></h2>
                 <form method="post" class="form-add-entry">
                     <table class="table table-sm table-striped table-hover">
                         <thead class="table-dark">
@@ -89,12 +97,13 @@ if(isset($_POST['stop-entry'])) {
                                 <td class="text-center">Start</td>
                                 <td class="text-center">End</td>
                                 <td class="text-center">Duration</td>
+                                <td class="text-center">Actions</td>
                             </tr>
                         </thead>
                         <tbody>
                         <?php
                         $total_duration = 0;
-                        foreach(getLogEntries(getCurrentUserId()) as $entry):
+                        foreach(getLogEntries(getCurrentUserId(), $log_start_dt) as $entry):
                             $total_duration += getEntryDuration($entry);
                         ?>
                             <tr>
@@ -112,11 +121,15 @@ if(isset($_POST['stop-entry'])) {
                                 <td class="text-center"><?php if(!empty($entry['enddt']) && !empty($entry['startdt'])): ?>
                                     <?php echo htmlspecialchars(number_format(getEntryDuration($entry) / 3600, 2)); ?>
                                 <?php endif; ?></td>
+
+                                <td class="text-center">
+                                    <button name="delete-entry" class="btn btn-danger btn-sm" type="submit" value="<?php echo htmlspecialchars($entry['id']); ?>"><i class="bi-trash"></i></button>
+                                </td>
                             </tr>
                         <?php endforeach; // End of looping through entries ?>
                         </tbody>
                         <tfoot>
-                            <td colspan="3" class="text-end">Total Duration:</td>
+                            <td colspan="4" class="text-end">Total Duration:</td>
                             <td class="text-center"><?php echo htmlspecialchars(number_format($total_duration/3600,2)); ?></td>
                         </tfoot>
                     </table>
