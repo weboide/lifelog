@@ -181,9 +181,9 @@ function addLogEntry($entry) {
     $db = getDatabaseConnection();
     $stmt = $db->prepare('INSERT INTO entry (userid, startdt, enddt, event) VALUES(:uid, :start, :end, :event)');
     return $stmt->execute([
-        'uid' => getCurrentUserId(),
-        'start' => $entry['start_date'],
-        'end' => $entry['end_date'],
+        'uid' => $entry['userid'],
+        'start' => $entry['startdt'],
+        'end' => $entry['enddt'],
         'event' => $entry['event'],
     ]);
 }

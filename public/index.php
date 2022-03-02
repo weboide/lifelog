@@ -3,8 +3,17 @@ require(__DIR__.'/../bootstrap.php');
 
 $log_start_dt = strtotime('today 00:00');
 
-/* Add an entry */
-if(isset($_POST['submitaddentry'])) {
+$entry_form = [
+    'event' => '',
+    'userid' => '',
+    'startdt' => '',
+    'enddt' => '',
+];
+
+
+/* Process input values if POST */
+
+if(isset($_POST['submitaddentry']) || isset($_POST['updateentry'])) {
 
     // TODO: sanitize form values.
     $tz = new DateTimeZone($_POST['tz']);
@@ -22,13 +31,22 @@ if(isset($_POST['submitaddentry'])) {
         $dt2 = DateTime::createFromFormat('H:i', $_POST['date2'], $tz);
     }
 
-    $entry = [
+    $entry_form = [
+        'userid' => getCurrentUserId(),
         'event' => $_POST['event'],
-        'start_date' => $dt1 ? $dt1->getTimestamp() : NULL,
-        'end_date' => $dt2 ? $dt2->getTimestamp() : NULL,
+        'startdt' => $dt1 ? $dt1->getTimestamp() : NULL,
+        'enddt' => $dt2 ? $dt2->getTimestamp() : NULL,
     ];
 
-    if(addLogEntry($entry)) {
+}
+
+/* Add an entry */
+
+
+/* Add an entry */
+if(isset($_POST['submitaddentry'])) {
+
+    if(addLogEntry($entry_form)) {
         redirect('/');
     }
 }
@@ -57,6 +75,19 @@ if(isset($_POST['delete-entry'])) {
     redirect('/');
 }
 
+
+/* Update an entry */
+if(isset($_GET['update-entry'])) {
+    $entry = getLogEntry($_GET['update-entry']);
+    if(!isset($_POST['updateentry'])) {
+        $entry_form = (array) $entry;
+    }
+    else {
+        updateLogEntry($entry['id'], $entry_form);
+        redirect('/');
+    }
+}
+
 ?>
 <?php require(__DIR__.'/../template_header.php'); ?>
 <div class="container">
@@ -64,9 +95,13 @@ if(isset($_POST['delete-entry'])) {
         <div class="col-sm-12 col-lg-6 my-3">
             <div class="p-3 bg-body rounded shadow-sm">
                 <form method="post" class="form-add-entry">
-                    <h2 class="form-add-entry-heading">Add an entry to the log</h2>
+                    <?php if(!isset($entry_form['id'])): ?>
+                        <h2 class="form-add-entry-heading">Add an entry to the log</h2>
+                    <?php else: ?>
+                        <h2 class="form-add-entry-heading">Update Entry ID:<?php echo htmlspecialchars($entry_form['id']); ?></h2>
+                    <?php endif; ?>
                     <div class="form-floating mb-3">
-                        <input type="text" name="event" id="inputevent" class="form-control" placeholder="Event Description..." required autofocus>
+                        <input type="text" name="event" id="inputevent" class="form-control" placeholder="Event Description..." required autofocus value="<?php echo htmlspecialchars($entry_form['event']); ?>">
                         <label for="inputevent" class="sr-only">Type an event (use #tag for tags)</label>
                     </div>
                     <div class="form-check form-switch mb-3">
@@ -74,15 +109,20 @@ if(isset($_POST['delete-entry'])) {
                         <label class="form-check-label" for="flexSwitchCheckDefault">Point in Time</label>
                     </div>
                     <div class="input-group mb-3">
-                        <input type="time" name="date1" id="inputDate1" class="form-control"/>
+                        <input type="time" name="date1" id="inputDate1" class="form-control" value="<?php echo htmlspecialchars($entry_form['startdt'] ? date('H:i', $entry_form['startdt']) : ''); ?>">
                         <span class="input-group-text"> to </span>
-                        <input type="time" name="date2" id="inputDate2" class="form-control"/>
+                        <input type="time" name="date2" id="inputDate2" class="form-control" value="<?php echo htmlspecialchars($entry_form['enddt'] ? date('H:i', $entry_form['enddt']) : ''); ?>">
                     </div>
                     <div class="form-floating mb-3">
                         <input type="text" name="tz" id="inputtz" class="form-control"/>
                         <label for="inputtz" class="sr-only">Time Zone</label>
                     </div>
-                    <button name="submitaddentry" class="btn btn-lg btn-primary btn-block" type="submit">Add Entry</button>
+                    <?php if(!isset($entry_form['id'])): ?>
+                        <button name="submitaddentry" class="btn btn-lg btn-primary btn-block" type="submit">Add Entry</button>
+                    <?php else: ?>
+                        <button name="updateentry" class="btn btn-lg btn-primary btn-block" type="submit">Update Entry</button>
+                        <a name="cancelupdate" class="btn btn-lg btn-secondary btn-block" href="/">Cancel</a>
+                    <?php endif; ?>
                 </form>
             </div>
         </div>
@@ -123,6 +163,7 @@ if(isset($_POST['delete-entry'])) {
                                 <?php endif; ?></td>
 
                                 <td class="text-center">
+                                    <a class="btn btn-success btn-sm" href="?update-entry=<?php echo htmlspecialchars($entry['id']) ?>"><i class="bi-pencil"></i></a>
                                     <button name="delete-entry" class="btn btn-danger btn-sm" type="submit" value="<?php echo htmlspecialchars($entry['id']); ?>"><i class="bi-trash"></i></button>
                                 </td>
                             </tr>
