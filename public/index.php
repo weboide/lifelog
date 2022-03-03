@@ -3,6 +3,10 @@ require(__DIR__.'/../bootstrap.php');
 
 $log_start_dt = strtotime('today 00:00');
 
+if(isset($_GET['dt'])) {
+    $log_start_dt = (int) $_GET['dt'];
+}
+
 $entry_form = [
     'event' => '',
     'userid' => '',
@@ -16,7 +20,7 @@ $entry_form = [
 if(isset($_POST['submitaddentry']) || isset($_POST['updateentry'])) {
 
     // TODO: sanitize form values.
-    $tz = new DateTimeZone($_POST['tz']);
+    $tz = new DateTimeZone(APP_TIMEZONE);
     $dt1 = NULL;
     $dt2 = NULL;
 
@@ -113,10 +117,6 @@ if(isset($_GET['update-entry'])) {
                         <span class="input-group-text"> to </span>
                         <input type="time" name="date2" id="inputDate2" class="form-control" value="<?php echo htmlspecialchars($entry_form['enddt'] ? date('H:i', $entry_form['enddt']) : ''); ?>">
                     </div>
-                    <div class="form-floating mb-3">
-                        <input type="text" name="tz" id="inputtz" class="form-control"/>
-                        <label for="inputtz" class="sr-only">Time Zone</label>
-                    </div>
                     <?php if(!isset($entry_form['id'])): ?>
                         <button name="submitaddentry" class="btn btn-lg btn-primary btn-block" type="submit">Add Entry</button>
                     <?php else: ?>
@@ -128,7 +128,11 @@ if(isset($_GET['update-entry'])) {
         </div>
         <div class="entries col-sm-12 col-lg-6 my-3">
             <div class="p-3 bg-body rounded shadow-sm">
-                <h2 class="text-center">Entries for <span class="text-muted"><?php echo htmlspecialchars(date('l Y-m-d', $log_start_dt)); ?></span></h2>
+                <h2 class="text-center">Entries for <br/>
+                    <a href="?dt=<?php echo htmlspecialchars($log_start_dt-86400); ?>" class="link-info"><i class="bi bi-arrow-left-square-fill"></i></a>
+                    <span class="text-muted"><?php echo htmlspecialchars(date('D Y-m-d', $log_start_dt)); ?></span>
+                    <a href="?dt=<?php echo htmlspecialchars($log_start_dt+86400); ?>" class="link-info"><i class="bi bi-arrow-right-square-fill"></i></a>
+                </h2>
                 <form method="post" class="form-add-entry">
                     <table class="table table-sm table-striped table-hover">
                         <thead class="table-dark">
@@ -143,7 +147,7 @@ if(isset($_GET['update-entry'])) {
                         <tbody>
                         <?php
                         $total_duration = 0;
-                        foreach(getLogEntries(getCurrentUserId(), $log_start_dt) as $entry):
+                        foreach(getLogEntries(getCurrentUserId(), $log_start_dt, $log_start_dt+86400) as $entry):
                             $total_duration += getEntryDuration($entry);
                         ?>
                             <tr>
