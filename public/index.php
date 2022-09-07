@@ -25,14 +25,14 @@ if(isset($_POST['submitaddentry']) || isset($_POST['updateentry'])) {
     $dt2 = NULL;
 
     if(!empty($_POST['date1'])) {
-        $dt1 = DateTime::createFromFormat('H:i', $_POST['date1'], $tz);
+        $dt1 = DateTime::createFromFormat('Y-m-d H:i', date('Y-m-d', $log_start_dt) . ' ' . $_POST['date1'], $tz);
     }
     else {
         $dt1 = new DateTime();
     }
 
     if(!empty($_POST['date2'])) {
-        $dt2 = DateTime::createFromFormat('H:i', $_POST['date2'], $tz);
+        $dt2 = DateTime::createFromFormat('Y-m-d H:i', date('Y-m-d', $log_start_dt) . ' ' . $_POST['date2'], $tz);
     }
 
     $entry_form = [
@@ -88,9 +88,11 @@ if(isset($_GET['update-entry'])) {
     }
     else {
         updateLogEntry($entry['id'], $entry_form);
-        redirect('/');
+        redirect('/?dt='.$log_start_dt);
     }
 }
+
+$today_entries = getLogEntries(getCurrentUserId(), $log_start_dt, $log_start_dt+86400);
 
 ?>
 <?php require(__DIR__.'/../template_header.php'); ?>
@@ -147,7 +149,7 @@ if(isset($_GET['update-entry'])) {
                         <tbody>
                         <?php
                         $total_duration = 0;
-                        foreach(getLogEntries(getCurrentUserId(), $log_start_dt, $log_start_dt+86400) as $entry):
+                        foreach($today_entries as $entry):
                             $total_duration += getEntryDuration($entry);
                         ?>
                             <tr>
@@ -167,7 +169,7 @@ if(isset($_GET['update-entry'])) {
                                 <?php endif; ?></td>
 
                                 <td class="text-center">
-                                    <a class="btn btn-success btn-sm" href="?update-entry=<?php echo htmlspecialchars($entry['id']) ?>"><i class="bi-pencil"></i></a>
+                                    <a class="btn btn-success btn-sm" href="?update-entry=<?php echo htmlspecialchars($entry['id']) ?>&dt=<?php echo htmlspecialchars($log_start_dt) ?>"><i class="bi-pencil"></i></a>
                                     <button name="delete-entry" class="btn btn-danger btn-sm" type="submit" value="<?php echo htmlspecialchars($entry['id']); ?>"><i class="bi-trash"></i></button>
                                 </td>
                             </tr>
@@ -179,6 +181,28 @@ if(isset($_GET['update-entry'])) {
                         </tfoot>
                     </table>
                 </form> <!-- /form-add-entry -->
+                <?php  ?>
+                    <table class="table table-sm table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <td class="text-center">Tag</td>
+                                <td class="text-center">Duration</td>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php
+                        foreach(totalsForTags($today_entries) as $tag => $duration):
+                        ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($tag) ?></td>
+
+                                <td class="text-center"><?php if(!empty($entry['enddt']) && !empty($entry['startdt'])): ?>
+                                    <?php echo htmlspecialchars(number_format($duration / 3600, 2)); ?>
+                                <?php endif; ?></td>
+                            </tr>
+                        <?php endforeach; // End of looping through tags ?>
+                        </tbody>
+                    </table>
             </div>
         </div> <!-- /entries -->
     </div> <!-- /row -->

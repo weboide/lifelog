@@ -52,6 +52,7 @@ function loggedin_init($user) {
  * Sets up a remember-me auth token. Make sure to run this before any output is produced.
  */
 function auth_token_setup($user) {
+    global $config;
     // Implementation from https://paragonie.com/blog/2015/04/secure-authentication-php-with-long-term-persistence#secure-remember-me-cookies.
     $db = getDatabaseConnection();
     $stmt = $db->prepare('INSERT INTO auth_tokens (selector, hashedValidator, userid, expires)
@@ -59,7 +60,7 @@ function auth_token_setup($user) {
 
     $selector = bin2hex(random_bytes(6));
     $validator = bin2hex(random_bytes(32));
-    $expiration = time() + 4*86400;
+    $expiration = time() + (isset($config['remember_me_duration']) ? $config['remember_me_duration'] : 4*86400);
     $stmt->execute([
         'userid' => $user['id'],
         'selector' => $selector,
@@ -243,4 +244,27 @@ function deleteLogEntry($id) {
     $db = getDatabaseConnection();
     $stmt = $db->prepare('DELETE FROM entry WHERE id = :id LIMIT 1');
     return $stmt->execute([':id' => $id]);
+}
+
+function totalsForTags($entries) {
+    $tags = [];
+    foreach($entries as $entry) {
+        $matches = [];
+        if(preg_match_all('/\#([\w_-]+)/i', $entry['event'], $matches, PREG_PATTERN_ORDER)) {
+            foreach($matches[1] as $match) {
+                if(!isset($tags[$match])) {
+                    $tags[$match] = 0;
+                }
+                $tags[$match] += getEntryDuration($entry);
+            }
+        }
+    }
+
+    return $tags;
+}
+
+function formatTags($text) {
+    $pre = '<span class="badge rounded-pill bg-secondary">';
+    $post = '</span>';
+    return preg_replace('/(\#[\w_-]+)/i', preg_quote($pre).'\\1'.preg_quote($post), $text);
 }
